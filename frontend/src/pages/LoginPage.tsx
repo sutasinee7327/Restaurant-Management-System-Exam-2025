@@ -1,5 +1,5 @@
 // src/pages/LoginPage.tsx
-import { useState, FormEvent } from 'react'
+import { useState, FormEvent, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import type { AxiosError } from 'axios'
@@ -7,23 +7,32 @@ import type { AxiosError } from 'axios'
 export default function LoginPage() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError]       = useState('')
-  const [loading, setLoading]   = useState(false)
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
   const { login, user } = useAuth()
   const navigate = useNavigate()
 
-  if (user) { navigate('/'); return null }
+  // แก้ไข: เปลี่ยนมาใช้ useEffect เพื่อการเปลี่ยนหน้าอย่างปลอดภัยหลังคอมโพเนนต์โหลดเสร็จ
+  useEffect(() => {
+    if (user) {
+      navigate('/', { replace: true })
+    }
+  }, [user, navigate])
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
-    setError(''); setLoading(true)
+    setError('')
+    setLoading(true)
+    
     try {
       await login(username, password)
-      navigate('/')
+      // Navigate จะถูกสั่งผ่าน useEffect ข้างบนเมื่อ user มีค่าเปลี่ยนไป
     } catch (err) {
       const e = err as AxiosError<{ error: string }>
-      setError(e.response?.data?.error ?? 'Login failed')
-    } finally { setLoading(false) }
+      setError(e.response?.data?.error ?? 'Invalid username or password')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -36,27 +45,31 @@ export default function LoginPage() {
         </div>
 
         {error && (
-          <div className="mb-4 px-4 py-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+          <div className="mb-4 px-4 py-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm animate-pulse">
             {error}
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="label">Username</label>
-            <input className="input" type="text" value={username} required
+            <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
+            <input className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" 
+              type="text" value={username} required
               placeholder="admin / cashier1 / waiter1"
               onChange={e => setUsername(e.target.value)} />
           </div>
           <div>
-            <label className="label">Password</label>
-            <input className="input" type="password" value={password} required
+            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+            <input className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" 
+              type="password" value={password} required
               placeholder="Password"
               onChange={e => setPassword(e.target.value)} />
           </div>
           <button type="submit" disabled={loading}
-            className="w-full btn-primary justify-center py-2.5 text-base mt-2">
-            {loading ? 'Signing in…' : 'Sign In'}
+            className={`w-full py-2.5 text-base font-semibold text-white rounded-lg transition-all ${
+              loading ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 shadow-lg'
+            }`}>
+            {loading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
 
